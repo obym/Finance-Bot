@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Bot Linker</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 100%; max-width: 450px; text-align: center; }
+        h2 { color: #229ED9; margin-bottom: 10px; font-size: 26px; } /* Warna biru khas Telegram */
+        p { color: #555; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+        
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 13px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; background-color: #fafafa; }
+        input[type="text"]:focus { border-color: #229ED9; outline: none; background-color: #fff; }
+        
+        button { background-color: #229ED9; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
+        button:hover { background-color: #1c88ba; }
+        button:disabled { background-color: #99cce6; cursor: not-allowed; }
+        
+        .status-box { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; font-size: 14px; font-weight: bold; }
+        .success { background-color: #e6f9ed; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Telegram Bot Linker</h2>
+        <p>Hubungkan Bot Telegram Anda dengan Google Apps Script dalam satu klik via Webhook.</p>
+        
+        <div class="input-group">
+            <label for="botToken">1. Masukkan Bot Token Telegram</label>
+            <input type="text" id="botToken" placeholder="Contoh: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+        </div>
+
+        <div class="input-group">
+            <label for="scriptUrl">2. Masukkan URL Web App Google Script</label>
+            <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+        </div>
+
+        <button id="btn-submit" onclick="hubungkanBot()">Hubungkan Sekarang</button>
+
+        <div id="statusNotif" class="status-box"></div>
+    </div>
+
+    <script>
+        function hubungkanBot() {
+            var token = document.getElementById('botToken').value.trim();
+            var urlGas = document.getElementById('scriptUrl').value.trim();
+            var notifBox = document.getElementById('statusNotif');
+            var btn = document.getElementById('btn-submit');
+
+            // Validasi Input
+            if(token === "" || urlGas === "") {
+                tampilkanNotif('error', '⚠️ Harap isi Token Telegram dan URL Google Script!');
+                return;
+            }
+
+            // Ubah tombol jadi mode loading
+            btn.innerHTML = "Menghubungkan...";
+            btn.disabled = true;
+            notifBox.style.display = 'none';
+
+            // Memanggil API Resmi Telegram untuk mengatur Webhook
+            // API: https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL_GAS>
+            var telegramApiUrl = "https://api.telegram.org/bot" + token + "/setWebhook?url=" + encodeURIComponent(urlGas);
+
+            fetch(telegramApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ok) {
+                        tampilkanNotif('success', '✅ Berhasil! Bot Telegram Anda sekarang terhubung ke Google Script.');
+                    } else {
+                        // Menangkap pesan error spesifik dari Telegram (misal token salah)
+                        tampilkanNotif('error', '❌ Gagal: ' + data.description);
+                    }
+                })
+                .catch(error => {
+                    tampilkanNotif('error', '❌ Terjadi kesalahan jaringan. Coba lagi.');
+                })
+                .finally(() => {
+                    // Kembalikan tombol ke keadaan semula
+                    btn.innerHTML = "Hubungkan Sekarang";
+                    btn.disabled = false;
+                });
+        }
+
+        // Fungsi bantuan untuk menampilkan warna notifikasi
+        function tampilkanNotif(tipe, pesan) {
+            var notifBox = document.getElementById('statusNotif');
+            notifBox.className = 'status-box ' + tipe;
+            notifBox.innerHTML = pesan;
+            notifBox.style.display = 'block';
+        }
+    </script>
+
+</body>
+</html>
