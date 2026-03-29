@@ -7,7 +7,7 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 100%; max-width: 450px; text-align: center; }
-        h2 { color: #229ED9; margin-bottom: 10px; font-size: 26px; } /* Warna biru khas Telegram */
+        h2 { color: #229ED9; margin-bottom: 10px; font-size: 26px; }
         p { color: #555; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
         
         .input-group { text-align: left; margin-bottom: 20px; }
@@ -15,20 +15,32 @@
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; background-color: #fafafa; }
         input[type="text"]:focus { border-color: #229ED9; outline: none; background-color: #fff; }
         
-        button { background-color: #229ED9; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
-        button:hover { background-color: #1c88ba; }
-        button:disabled { background-color: #99cce6; cursor: not-allowed; }
+        /* Desain grup tombol agar sejajar/rapi */
+        .button-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        
+        button { border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; color: white; }
+        
+        /* Tombol Connect (Biru) */
+        .btn-primary { background-color: #229ED9; }
+        .btn-primary:hover { background-color: #1c88ba; }
+        .btn-primary:disabled { background-color: #99cce6; cursor: not-allowed; }
+
+        /* Tombol Stop/Disconnect (Merah) */
+        .btn-danger { background-color: #e53935; }
+        .btn-danger:hover { background-color: #c62828; }
+        .btn-danger:disabled { background-color: #ef9a9a; cursor: not-allowed; }
         
         .status-box { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; font-size: 14px; font-weight: bold; }
         .success { background-color: #e6f9ed; color: #2e7d32; border: 1px solid #a5d6a7; }
         .error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .warning { background-color: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h2>Telegram Bot Linker</h2>
-        <p>Hubungkan Bot Telegram Anda dengan Google Apps Script dalam satu klik via Webhook.</p>
+        <p>Kelola koneksi Bot Telegram Anda dengan Google Apps Script.</p>
         
         <div class="input-group">
             <label for="botToken">1. Masukkan Bot Token Telegram</label>
@@ -37,43 +49,45 @@
 
         <div class="input-group">
             <label for="scriptUrl">2. Masukkan URL Web App Google Script</label>
-            <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+            <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            <small style="color: #888; font-size: 11px; margin-top: 4px; display: block;">*URL hanya diperlukan untuk menghubungkan bot.</small>
         </div>
 
-        <button id="btn-submit" onclick="hubungkanBot()">Hubungkan Sekarang</button>
+        <div class="button-group">
+            <button id="btn-submit" class="btn-primary" onclick="hubungkanBot()">🔗 Hubungkan Bot</button>
+            
+            <button id="btn-stop" class="btn-danger" onclick="putuskanBot()">🛑 Stop Link (Putus Koneksi)</button>
+        </div>
 
         <div id="statusNotif" class="status-box"></div>
     </div>
 
     <script>
+        // ==========================================
+        // FUNGSI 1: MENGHUBUNGKAN BOT (SET WEBHOOK)
+        // ==========================================
         function hubungkanBot() {
             var token = document.getElementById('botToken').value.trim();
             var urlGas = document.getElementById('scriptUrl').value.trim();
-            var notifBox = document.getElementById('statusNotif');
             var btn = document.getElementById('btn-submit');
 
-            // Validasi Input
             if(token === "" || urlGas === "") {
                 tampilkanNotif('error', '⚠️ Harap isi Token Telegram dan URL Google Script!');
                 return;
             }
 
-            // Ubah tombol jadi mode loading
             btn.innerHTML = "Menghubungkan...";
             btn.disabled = true;
-            notifBox.style.display = 'none';
+            document.getElementById('statusNotif').style.display = 'none';
 
-            // Memanggil API Resmi Telegram untuk mengatur Webhook
-            // API: https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL_GAS>
             var telegramApiUrl = "https://api.telegram.org/bot" + token + "/setWebhook?url=" + encodeURIComponent(urlGas);
 
             fetch(telegramApiUrl)
                 .then(response => response.json())
                 .then(data => {
                     if (data.ok) {
-                        tampilkanNotif('success', '✅ Berhasil! Bot Telegram Anda sekarang terhubung ke Google Script.');
+                        tampilkanNotif('success', '✅ Berhasil! Bot terhubung ke Google Script.');
                     } else {
-                        // Menangkap pesan error spesifik dari Telegram (misal token salah)
                         tampilkanNotif('error', '❌ Gagal: ' + data.description);
                     }
                 })
@@ -81,13 +95,56 @@
                     tampilkanNotif('error', '❌ Terjadi kesalahan jaringan. Coba lagi.');
                 })
                 .finally(() => {
-                    // Kembalikan tombol ke keadaan semula
-                    btn.innerHTML = "Hubungkan Sekarang";
+                    btn.innerHTML = "🔗 Hubungkan Bot";
                     btn.disabled = false;
                 });
         }
 
-        // Fungsi bantuan untuk menampilkan warna notifikasi
+        // ==========================================
+        // FUNGSI 2: MEMUTUSKAN BOT (DELETE WEBHOOK)
+        // ==========================================
+        function putuskanBot() {
+            var token = document.getElementById('botToken').value.trim();
+            var btnStop = document.getElementById('btn-stop');
+
+            // Untuk memutuskan koneksi, kita hanya butuh Token, tidak butuh URL
+            if(token === "") {
+                tampilkanNotif('error', '⚠️ Harap isi Token Telegram untuk memutus koneksi!');
+                return;
+            }
+
+            // Konfirmasi agar tidak tidak sengaja terpencet
+            var konfirmasi = confirm("Yakin ingin menghentikan bot? Bot tidak akan merespons pesan lagi sampai dihubungkan ulang.");
+            if (!konfirmasi) return;
+
+            btnStop.innerHTML = "Memutuskan...";
+            btnStop.disabled = true;
+            document.getElementById('statusNotif').style.display = 'none';
+
+            // API Resmi Telegram untuk menghapus webhook
+            var telegramApiUrl = "https://api.telegram.org/bot" + token + "/deleteWebhook?drop_pending_updates=true";
+
+            fetch(telegramApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ok) {
+                        tampilkanNotif('warning', '🔌 Berhasil! Koneksi bot telah diputus. Bot tidak aktif.');
+                    } else {
+                        tampilkanNotif('error', '❌ Gagal: ' + data.description);
+                    }
+                })
+                .catch(error => {
+                    tampilkanNotif('error', '❌ Terjadi kesalahan jaringan. Coba lagi.');
+                })
+                .finally(() => {
+                    btnStop.innerHTML = "🛑 Stop Link (Putus Koneksi)";
+                    btnStop.disabled = false;
+                });
+        }
+
+        // ==========================================
+        // FUNGSI BANTUAN NOTIFIKASI
+        // ==========================================
         function tampilkanNotif(tipe, pesan) {
             var notifBox = document.getElementById('statusNotif');
             notifBox.className = 'status-box ' + tipe;
